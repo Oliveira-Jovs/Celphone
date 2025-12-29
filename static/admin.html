@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Painel Administrativo</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #f2f4f7;
+            margin: 0;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #0a2a43;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,.08);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th, td {
+            padding: 14px;
+            text-align: left;
+        }
+
+        th {
+            background: #0a2a43;
+            color: #fff;
+        }
+
+        tr:nth-child(even) {
+            background: #f7f9fc;
+        }
+
+        .msg {
+            padding: 20px;
+            background: #fff;
+            border-radius: 6px;
+            text-align: center;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Painel Administrativo — Usuários</h1>
+
+<div id="content" class="msg">Carregando...</div>
+
+<script>
+const API_URL = "http://127.0.0.1:5000/api/usuarios"; // 🔥 explícito
+const content = document.getElementById("content");
+
+fetch(API_URL)
+    .then(res => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+    })
+    .then(data => {
+        if (!data.length) {
+            content.innerHTML = "Nenhum usuário cadastrado.";
+            return;
+        }
+
+        let html = `
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Telefone</th>
+                        <th>Nome</th>
+                        <th>Colégio</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        data.forEach(u => {
+            html += `
+                <tr>
+                    <td>${u.id}</td>
+                    <td>${u.telefone}</td>
+                    <td>${u.nome}</td>
+                    <td>${u.colegio}</td>
+                </tr>
+            `;
+        });
+
+        html += "</tbody></table>";
+        content.innerHTML = html;
+        content.className = "";
+    })
+    .catch(err => {
+        content.innerHTML = "Erro ao carregar usuários<br>" + err.message;
+    });
+</script>
+
+</body>
+</html>

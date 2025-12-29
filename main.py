@@ -1,10 +1,13 @@
+import ctypes
+import time
+import sys
+import os
+import sqlite3
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import sqlite3
-import os
 
 app = FastAPI()
 
@@ -17,9 +20,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------- PATHS ----------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+mutex_name = "ZapinhoLauncherMutex"
+mutex = ctypes.windll.kernel32.CreateMutexW(None, False, mutex_name)
+if ctypes.windll.kernel32.GetLastError() == 183:
+    sys.exit(0)  
+
+if getattr(sys, "frozen", False):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 STATIC_DIR = os.path.join(BASE_DIR, "static")
+DB_PATH = os.path.join(os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else BASE_DIR, "usuarios.db")
 
 # ---------- STATIC ----------
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -29,8 +41,12 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 def index():
     return FileResponse(os.path.join(STATIC_DIR, "index.html"))
 
+@app.get("/admin")
+def admin():
+    return FileResponse(os.path.join(STATIC_DIR, "admin.html"))
+
 # ---------- BANCO ----------
-conn = sqlite3.connect("usuarios.db", check_same_thread=False)
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cursor = conn.cursor()
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS usuarios (
@@ -42,6 +58,16 @@ CREATE TABLE IF NOT EXISTS usuarios (
 """)
 conn.commit()
 
+# ---------- API ADMIN ----------
+@app.get("/api/usuarios")
+def listar_usuarios():
+    cursor.execute("SELECT id, telefone, nome, colegio FROM usuarios")
+    rows = cursor.fetchall()
+    return [
+        {"id": r[0], "telefone": r[1], "nome": r[2], "colegio": r[3]}
+        for r in rows
+    ]
+
 # ---------- CURSOS ----------
 CURSOS = {
     1: {"nome": "ADMINISTRAÇÃO", "turnos": {"diurno": 694.62, "noturno": 689.69}},
@@ -51,13 +77,8 @@ CURSOS = {
     5: {"nome": "BIBLIOTECONOMIA", "turnos": {"diurno": 638.46}},
     6: {"nome": "BIOMEDICINA", "turnos": {"diurno": 732.65}},
     7: {"nome": "CIÊNCIA DA COMPUTAÇÃO", "turnos": {"diurno": 801.38}},
-    8: {"nome": "CIÊNCIA POLÍTICA", "turnos": {"diurno": 670.18}},
-    9: {"nome": "CIÊNCIAS ATUARIAIS", "turnos": {"diurno": 651.39}},
-    10: {"nome": "CIÊNCIAS BIOLÓGICAS", "turnos": {"diurno": 669.43, "noturno": 660.48}},
-    11: {"nome": "CIÊNCIAS BIOLÓGICAS - ÊNFASE CIÊNCIAS AMBIENTAIS", "turnos": {"diurno": 640.25}},
 }
 
-# ---------- ESTADO ----------
 usuarios = {}
 
 # ---------- MODELO ----------
@@ -66,6 +87,13 @@ class Mensagem(BaseModel):
     message: str
 
 # ---------- FUNÇÕES ----------
+def is_number(valor):
+    try:
+        float(valor)
+        return True
+    except ValueError:
+        return False
+
 def salvar_usuario(telefone, nome, colegio):
     cursor.execute(
         "INSERT INTO usuarios (telefone, nome, colegio) VALUES (?, ?, ?)",
@@ -88,21 +116,22 @@ def calcular_ssa3(ssa1, ssa2, redacao, nota_corte):
 # ---------- CHAT ----------
 @app.post("/chat")
 def chat(msg: Mensagem):
-    telefone = msg.user_id
+    session_id = msg.user_id
     texto = msg.message.strip().lower()
 
-    if telefone not in usuarios:
-        usuarios[telefone] = {"etapa": 0}
+    if session_id not in usuarios:
+        usuarios[session_id] = {"etapa": 0}
 
-    u = usuarios[telefone]
+    u = usuarios[session_id]
 
     if u["etapa"] == 0:
-        u["etapa"] = 1
+        if texto == "sim":
+            u["etapa"] = 1
+            return {"reply": "Consentimento registrado. Informe seu número de telefone."}
         return {"reply": "Você concorda com o uso dos seus dados? Responda SIM."}
 
     if u["etapa"] == 1:
-        if texto != "sim":
-            return {"reply": "Sem consentimento não é possível continuar."}
+        u["telefone"] = texto
         u["etapa"] = 2
         return {"reply": "Qual seu nome completo?"}
 
@@ -113,38 +142,52 @@ def chat(msg: Mensagem):
 
     if u["etapa"] == 3:
         u["colegio"] = texto.title()
-        salvar_usuario(telefone, u["nome"], u["colegio"])
+        salvar_usuario(u["telefone"], u["nome"], u["colegio"])
         u["etapa"] = 4
         return {"reply": "Informe sua nota do SSA1"}
 
     if u["etapa"] == 4:
+        if not is_number(texto):
+            return {"reply": "Digite apenas números para a nota do SSA1."}
         u["ssa1"] = float(texto)
         u["etapa"] = 5
         return {"reply": "Informe sua nota do SSA2"}
 
     if u["etapa"] == 5:
+        if not is_number(texto):
+            return {"reply": "Digite apenas números para a nota do SSA2."}
         u["ssa2"] = float(texto)
         u["etapa"] = 6
         return {"reply": "Qual nota você acha que vai tirar na redação?"}
 
     if u["etapa"] == 6:
+        if not is_number(texto):
+            return {"reply": "Digite apenas números para a redação."}
         u["redacao"] = float(texto)
         u["etapa"] = 7
         return {"reply": f"Escolha o curso:\n\n{listar_cursos()}"}
 
     if u["etapa"] == 7:
-        curso = CURSOS[int(texto)]
-        u["curso"] = curso
+        if not texto.isdigit() or int(texto) not in CURSOS:
+            return {"reply": "Curso inválido. Escolha pelo número."}
+        u["curso"] = CURSOS[int(texto)]
         u["etapa"] = 8
-        return {"reply": "Qual turno? (diurno / noturno)"}
+        return {"reply": f"Qual turno? ({' / '.join(u['curso']['turnos'].keys())})"}
 
     if u["etapa"] == 8:
-        curso = u["curso"]
-        nota_corte = curso["turnos"][texto]
+        if texto not in u["curso"]["turnos"]:
+            return {"reply": "Turno inválido."}
+        nota_corte = u["curso"]["turnos"][texto]
         ssa3 = calcular_ssa3(u["ssa1"], u["ssa2"], u["redacao"], nota_corte)
-        usuarios.pop(telefone)
-        return {
-            "reply": f"{u['nome']}, você precisa tirar {ssa3} no SSA3."
-        }
+        usuarios.pop(session_id)
+        return {"reply": f"{u['nome']}, você precisa tirar {ssa3} no SSA3."}
 
-    return {"reply": "Erro."}
+    return {"reply": "Erro inesperado."}
+
+LAST_ACCESS = time.time()
+
+@app.middleware("http")
+async def track_access(request, call_next):
+    global LAST_ACCESS
+    LAST_ACCESS = time.time()
+    return await call_next(request)

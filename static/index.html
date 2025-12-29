@@ -2,173 +2,707 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador SSA — UFPE / UFRPE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --ufpe-blue: #0A2A43;
+            --ufpe-light-blue: #1E4A6E;
+            --ufpe-gold: #D4AF37;
+            --ufrpe-green: #2E7D32;
+            --light-bg: #F5F7FA;
+            --card-bg: #FFFFFF;
+            --text-dark: #333333;
+            --text-light: #666666;
+            --success: #4CAF50;
+            --warning: #FF9800;
+            --border-radius: 12px;
+            --shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: "Segoe UI", Arial, sans-serif;
-            background-color: #f2f4f7;
+            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text-dark);
+            line-height: 1.6;
+            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path d="M0,50 L50,0 L100,50 L50,100 Z" fill="%230A2A43" opacity="0.02"/></svg>');
+            background-size: 120px;
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            margin: 0;
+            padding: 20px;
         }
 
-        .chat-container {
-            width: 420px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        .container {
+            width: 100%;
+            max-width: 900px;
             display: flex;
             flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Header Institucional */
+        .institutional-header {
+            background: linear-gradient(135deg, var(--ufpe-blue) 0%, var(--ufpe-light-blue) 100%);
+            color: white;
+            padding: 24px 32px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .institutional-header::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.1) 0%, transparent 70%);
+        }
+
+        .header-text h1 {
+            font-size: 28px;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .header-text p {
+            font-size: 15px;
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto 16px;
+        }
+
+        .alert-box {
+            background-color: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            font-size: 14px;
+            display: inline-block;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            gap: 24px;
+        }
+
+        /* Chat Container */
+        .chat-container {
+            flex: 2;
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .chat-header {
-            background-color: #0a2a43;
-            color: #ffffff;
-            padding: 16px;
-            border-radius: 8px 8px 0 0;
+            background: linear-gradient(to right, var(--ufpe-blue), var(--ufpe-light-blue));
+            color: white;
+            padding: 20px;
             text-align: center;
+            position: relative;
         }
 
-        .chat-header h1 {
-            font-size: 18px;
-            margin: 0;
+        .chat-header h2 {
+            font-size: 22px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
         }
 
         .chat-header p {
-            font-size: 12px;
-            margin: 4px 0 0;
+            font-size: 14px;
             opacity: 0.9;
         }
 
         .chat-messages {
-            padding: 16px;
             flex: 1;
+            padding: 24px;
             overflow-y: auto;
-            background-color: #fafafa;
+            background-color: #F9FAFC;
+            max-height: 500px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
 
         .message {
-            max-width: 80%;
-            margin-bottom: 12px;
-            padding: 10px 14px;
-            border-radius: 6px;
-            font-size: 14px;
-            line-height: 1.4;
-            white-space: pre-line;
+            max-width: 85%;
+            padding: 16px 20px;
+            border-radius: var(--border-radius);
+            font-size: 15px;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .bot {
-            background-color: #e3e7ec;
-            color: #1a1a1a;
+            background-color: white;
+            color: var(--text-dark);
             align-self: flex-start;
+            border-left: 4px solid var(--ufpe-blue);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .bot::before {
+            content: "🤖";
+            position: absolute;
+            left: -40px;
+            top: 16px;
+            font-size: 18px;
         }
 
         .user {
-            background-color: #0a2a43;
-            color: #ffffff;
+            background: linear-gradient(to right, var(--ufpe-light-blue), var(--ufpe-blue));
+            color: white;
             align-self: flex-end;
+            border-right: 4px solid var(--ufpe-gold);
         }
 
         .chat-input {
             display: flex;
-            border-top: 1px solid #ddd;
+            border-top: 1px solid #EAECF0;
+            background-color: white;
         }
 
         .chat-input input {
             flex: 1;
-            padding: 14px;
+            padding: 20px;
             border: none;
-            font-size: 14px;
-        }
-
-        .chat-input button {
-            background-color: #0a2a43;
-            color: #ffffff;
-            border: none;
-            padding: 0 20px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-
-        .chat-input button:hover {
-            background-color: #08304f;
+            font-size: 16px;
+            background: transparent;
         }
 
         .chat-input input:focus {
             outline: none;
         }
 
+        .chat-input input::placeholder {
+            color: #999;
+        }
+
+        .chat-input button {
+            background: linear-gradient(to right, var(--ufpe-light-blue), var(--ufpe-blue));
+            color: white;
+            border: none;
+            padding: 0 28px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .chat-input button:hover {
+            background: linear-gradient(to right, var(--ufpe-blue), var(--ufpe-light-blue));
+        }
+
+        /* Sidebar Informativa */
+        .info-sidebar {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .info-card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 24px;
+            box-shadow: var(--shadow);
+        }
+
+        .info-card h3 {
+            color: var(--ufpe-blue);
+            font-size: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #F0F2F5;
+        }
+
+        .info-card h3 i {
+            color: var(--ufpe-gold);
+        }
+
+        .info-list {
+            list-style: none;
+        }
+
+        .info-list li {
+            padding: 12px 0;
+            border-bottom: 1px solid #F0F2F5;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .info-list li:last-child {
+            border-bottom: none;
+        }
+
+        .info-list i {
+            color: var(--ufpe-light-blue);
+            width: 20px;
+        }
+
+        .calc-steps {
+            background-color: #F8F9FA;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid var(--ufpe-gold);
+        }
+
+        .step {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+
+        .step-number {
+            background-color: var(--ufpe-blue);
+            color: white;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        /* Footer */
         .footer {
             text-align: center;
-            font-size: 11px;
-            color: #777;
-            padding: 6px;
+            font-size: 13px;
+            color: var(--text-light);
+            padding: 16px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .footer a {
+            color: var(--ufpe-light-blue);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .chat-messages {
+                max-height: 400px;
+            }
+            
+            .message {
+                max-width: 95%;
+            }
+            
+            .bot::before {
+                display: none;
+            }
+        }
+
+        /* Botão de autorização */
+        .auth-button {
+            background: linear-gradient(to right, var(--success), #45a049);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .auth-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Estilos para listas de cursos */
+        .courses-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #EAECF0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            background: white;
+        }
+
+        .course-item {
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: #F8F9FA;
+            border-radius: 6px;
+            border-left: 3px solid var(--ufpe-light-blue);
+            font-size: 14px;
+        }
+
+        .course-item:nth-child(even) {
+            background: #F0F2F5;
+        }
+
+        .course-number {
+            display: inline-block;
+            width: 30px;
+            font-weight: bold;
+            color: var(--ufpe-blue);
+        }
+
+        .course-name {
+            font-weight: 600;
+        }
+
+        .course-turno {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-left: 8px;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            color: var(--text-light);
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--ufpe-light-blue);
+            border-radius: 50%;
+            animation: typing 1.4s infinite both;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
         }
     </style>
 </head>
 <body>
 
-<div class="chat-container">
-    <div class="chat-header">
-        <h1>Simulador SSA</h1>
-        <p>UFPE / UFRPE — Ambiente de Teste</p>
+<div style="text-align: right; margin-bottom: 10px;">
+    <a href="/admin" target="_blank" style="
+        background:#0a2a43;
+        color:#fff;
+        padding:8px 14px;
+        border-radius:6px;
+        text-decoration:none;
+        font-size:13px;
+        font-weight:600;
+    ">
+        🔧 Admin (dev)
+    </a>
+</div>
+
+<div class="container">
+    <!-- Header Institucional -->
+    <header class="institutional-header">
+        <div class="header-text">
+            <h1><i class="fas fa-calculator"></i> Simulador SSA Estratégico</h1>
+            <p>Calcule a nota necessária no SSA 3 com base nas suas notas do SSA 1 e SSA 2, considerando os pesos oficiais do sistema</p>
+            <div class="alert-box">
+                <i class="fas fa-shield-alt"></i> Sistema otimizado para cálculo preciso de metas
+            </div>
+        </div>
+    </header>
+
+    <div class="main-content">
+        <!-- Chat Container -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2><i class="fas fa-bullseye"></i> Cálculo de Meta SSA 3</h2>
+                <p>Insira suas notas para descobrir quanto precisa no SSA 3</p>
+            </div>
+
+            <div id="messages" class="chat-messages">
+                <!-- Mensagens serão inseridas aqui via JavaScript -->
+            </div>
+
+            <div class="chat-input">
+                <input id="input" type="text" placeholder="Digite suas notas (ex: SSA1=650, SSA2=700)..." />
+                <button onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i> Calcular
+                </button>
+            </div>
+        </div>
+
+        <!-- Sidebar Informativa -->
+        <div class="info-sidebar">
+            <div class="info-card">
+                <h3><i class="fas fa-bullseye"></i> Objetivo do Simulador</h3>
+                <p style="margin-bottom: 15px; color: var(--text-light); font-size: 14px;">
+                    Este sistema calcula exatamente a nota que você precisa tirar no SSA 3 para alcançar sua meta, considerando:
+                </p>
+                <ul class="info-list">
+                    <li><i class="fas fa-chart-line"></i> <strong>Notas do SSA 1 e SSA 2</strong></li>
+                    <li><i class="fas fa-balance-scale"></i> <strong>Pesos oficiais do sistema</strong></li>
+                    <li><i class="fas fa-bullseye"></i> <strong>Média mínima do curso desejado</strong></li>
+                    <li><i class="fas fa-graduation-cap"></i> <strong>Possível nota do ENEM (opcional)</strong></li>
+                </ul>
+            </div>
+
+            <div class="info-card">
+                <h3><i class="fas fa-calculator"></i> Como Funciona o Cálculo</h3>
+                <div class="calc-steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div>Forneça suas notas do <strong>SSA 1 (20%)</strong> e <strong>SSA 2 (30%)</strong></div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div>Informe a <strong>média necessária</strong> para seu curso</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div>Adicione sua <strong>nota do ENEM</strong> (se já tiver)</div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div>Receba a <strong>nota mínima necessária no SSA 3 (50%)</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-card">
+                <h3><i class="fas fa-chart-bar"></i> Cursos Mais Procurados</h3>
+                <div class="courses-container" id="popular-courses">
+                    <!-- Cursos serão inseridos via JavaScript -->
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div id="messages" class="chat-messages"></div>
-
-    <div class="chat-input">
-        <input id="input" type="text" placeholder="Digite sua mensagem..." />
-        <button onclick="sendMessage()">Enviar</button>
-    </div>
-
-    <div class="footer">
-        Simulação acadêmica — Dados fictícios
-    </div>
+    <!-- Footer -->
+    <footer class="footer">
+        <p>
+            <i class="fas fa-info-circle"></i> <strong>Sistema Estratégico de Cálculo</strong> — Focado em planejamento acadêmico. 
+            <a href="#"><i class="fas fa-external-link-alt"></i> Consulte os pesos oficiais</a> | 
+            <a href="#"><i class="fas fa-file-pdf"></i> Edital SSA 2024</a>
+        </p>
+        <p style="margin-top: 8px; font-size: 12px;">
+            © 2024 Simulador Estratégico • Dados para planejamento estudantil
+        </p>
+    </footer>
 </div>
 
 <script>
     const API_URL = "http://127.0.0.1:5000/chat";
-    const USER_ID = "usuario_teste_001";
+    const USER_ID = "usuario_" + Math.floor(Math.random() * 10000);
+    
+    let userConsented = false;
 
     const messagesDiv = document.getElementById("messages");
     const input = document.getElementById("input");
 
-    function addMessage(text, sender) {
+    // Cursos populares para exibir na sidebar
+    const popularCourses = [
+        { number: 1, name: "MEDICINA", turno: "diurno", code: "7" },
+        { number: 2, name: "DIREITO", turno: "diurno/noturno", code: "12" },
+        { number: 3, name: "ENGENHARIA CIVIL", turno: "diurno/noturno", code: "15" },
+        { number: 4, name: "CIÊNCIA DA COMPUTAÇÃO", turno: "diurno", code: "7" },
+        { number: 5, name: "PSICOLOGIA", turno: "diurno", code: "30" },
+        { number: 6, name: "ADMINISTRAÇÃO", turno: "diurno/noturno", code: "1" },
+        { number: 7, name: "ARQUITETURA E URBANISMO", turno: "diurno/noturno", code: "3" },
+        { number: 8, name: "ENFERMAGEM", turno: "diurno", code: "14" }
+    ];
+
+    function populatePopularCourses() {
+        const container = document.getElementById('popular-courses');
+        popularCourses.forEach(course => {
+            const div = document.createElement('div');
+            div.className = 'course-item';
+            div.innerHTML = `
+                <span class="course-number">${course.number}.</span>
+                <span class="course-name">${course.name}</span>
+                <span class="course-turno">(${course.turno})</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function addMessage(text, sender, className = "") {
         const div = document.createElement("div");
         div.classList.add("message", sender);
-        div.innerText = text;
+        if (className) div.classList.add(className);
+        div.innerHTML = text;
         messagesDiv.appendChild(div);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    async function sendMessage() {
+    function showTypingIndicator() {
+        const indicator = document.createElement("div");
+        indicator.className = "typing-indicator";
+        indicator.id = "typingIndicator";
+        indicator.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <span>Calculando meta...</span>
+        `;
+        messagesDiv.appendChild(indicator);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function hideTypingIndicator() {
+        const indicator = document.getElementById("typingIndicator");
+        if (indicator) indicator.remove();
+    }
+
+    function formatCourseList(coursesText) {
+        const lines = coursesText.split('\n');
+        const container = document.createElement('div');
+        container.className = 'courses-container';
+        
+        lines.forEach(line => {
+            const match = line.match(/(\d+)\s*-\s*(.+?)\s*\((.+?)\)/);
+            if (match) {
+                const [, number, name, turno] = match;
+                const div = document.createElement('div');
+                div.className = 'course-item';
+                div.innerHTML = `
+                    <span class="course-number">${number}.</span>
+                    <span class="course-name">${name}</span>
+                    <span class="course-turno">(${turno})</span>
+                `;
+                container.appendChild(div);
+            }
+        });
+        
+        return container.outerHTML;
+    }
+
+    function sendDirectToAPI(message) {
+        showTypingIndicator();
+
+        fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                user_id: USER_ID,
+                message: message
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideTypingIndicator();
+            
+            if (data.reply.includes("Escolha o curso:") || 
+                data.reply.includes("1 - ") && data.reply.includes("2 - ")) {
+                const formattedReply = formatCourseList(data.reply);
+                addMessage(formattedReply, "bot");
+            } else {
+                addMessage(data.reply, "bot");
+            }
+        })
+        .catch(error => {
+            hideTypingIndicator();
+            addMessage("❌ <strong>Erro de conexão</strong><br>Não foi possível conectar ao servidor. Verifique se a API está rodando em http://127.0.0.1:5000", "bot", "system");
+            console.error("Erro:", error);
+        });
+    }
+
+    function sendMessage() {
         const text = input.value.trim();
         if (!text) return;
 
         addMessage(text, "user");
         input.value = "";
-
-        const response = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                user_id: USER_ID,
-                message: text
-            })
-        });
-
-        const data = await response.json();
-        addMessage(data.reply, "bot");
+        
+        sendDirectToAPI(text);
     }
+
+    function handleAuthorization() {
+    addMessage("SIM", "user");
+    sendDirectToAPI("SIM");
+}
+
+    // Permitir enviar com Enter
+    input.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            sendMessage();
+        }
+    });
 
     // Mensagem inicial automática
     window.onload = () => {
-        addMessage(
-            "Bem-vindo ao simulador de notas do SSA.\nDigite qualquer mensagem para começar.",
-            "bot"
-        );
+        setTimeout(() => {
+            populatePopularCourses();
+            addMessage(
+                `<strong>🎯 SIMULADOR DE META SSA 3</strong><br><br>
+                Olá! Sou seu assistente para cálculo da nota necessária no SSA 3.<br><br>
+                
+                <strong>Como funciona:</strong><br>
+                1. Informe suas notas do SSA 1 e SSA 2<br>
+                2. Escolha o curso desejado<br>
+                3. Receba a nota mínima necessária no SSA 3<br><br>
+                
+                <strong>📝 Formato sugerido:</strong><br>
+                <code>SSA1=620 SSA2=680 curso=Medicina</code><br><br>
+                
+                <strong>Para começar, autorize a coleta e uso dos dados informados aqui:</strong><br>
+                <button class="auth-button" onclick="handleAuthorization()">
+                    <i class="fas fa-check-circle"></i> SIM - Para autorizar o uso!
+                </button>`,
+                "bot", "highlight"
+            );
+        }, 500);
     };
 </script>
 
