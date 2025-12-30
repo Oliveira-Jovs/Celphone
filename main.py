@@ -20,18 +20,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ---------- MUTEX (Windows) ----------
 mutex_name = "ZapinhoLauncherMutex"
 mutex = ctypes.windll.kernel32.CreateMutexW(None, False, mutex_name)
 if ctypes.windll.kernel32.GetLastError() == 183:
-    sys.exit(0)  
+    sys.exit(0)
 
+# ---------- PATHS ----------
 if getattr(sys, "frozen", False):
     BASE_DIR = sys._MEIPASS
 else:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 STATIC_DIR = os.path.join(BASE_DIR, "static")
-DB_PATH = os.path.join(os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else BASE_DIR, "usuarios.db")
+DB_PATH = os.path.join(
+    os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else BASE_DIR,
+    "usuarios.db"
+)
 
 # ---------- STATIC ----------
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -48,12 +53,14 @@ def admin():
 # ---------- BANCO ----------
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 cursor = conn.cursor()
+
 cursor.execute("""
 CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     telefone TEXT,
     nome TEXT,
-    colegio TEXT
+    colegio TEXT,
+    curso TEXT
 )
 """)
 conn.commit()
@@ -61,10 +68,16 @@ conn.commit()
 # ---------- API ADMIN ----------
 @app.get("/api/usuarios")
 def listar_usuarios():
-    cursor.execute("SELECT id, telefone, nome, colegio FROM usuarios")
+    cursor.execute("SELECT id, telefone, nome, colegio, curso FROM usuarios")
     rows = cursor.fetchall()
     return [
-        {"id": r[0], "telefone": r[1], "nome": r[2], "colegio": r[3]}
+        {
+            "id": r[0],
+            "telefone": r[1],
+            "nome": r[2],
+            "colegio": r[3],
+            "curso": r[4],
+        }
         for r in rows
     ]
 
@@ -94,10 +107,10 @@ def is_number(valor):
     except ValueError:
         return False
 
-def salvar_usuario(telefone, nome, colegio):
+def salvar_usuario(telefone, nome, colegio, curso):
     cursor.execute(
-        "INSERT INTO usuarios (telefone, nome, colegio) VALUES (?, ?, ?)",
-        (telefone, nome, colegio),
+        "INSERT INTO usuarios (telefone, nome, colegio, curso) VALUES (?, ?, ?, ?)",
+        (telefone, nome, colegio, curso),
     )
     conn.commit()
 
@@ -142,7 +155,6 @@ def chat(msg: Mensagem):
 
     if u["etapa"] == 3:
         u["colegio"] = texto.title()
-        salvar_usuario(u["telefone"], u["nome"], u["colegio"])
         u["etapa"] = 4
         return {"reply": "Informe sua nota do SSA1"}
 
@@ -177,13 +189,23 @@ def chat(msg: Mensagem):
     if u["etapa"] == 8:
         if texto not in u["curso"]["turnos"]:
             return {"reply": "Turno inválido."}
+
         nota_corte = u["curso"]["turnos"][texto]
         ssa3 = calcular_ssa3(u["ssa1"], u["ssa2"], u["redacao"], nota_corte)
+
+        salvar_usuario(
+            u["telefone"],
+            u["nome"],
+            u["colegio"],
+            u["curso"]["nome"]
+        )
+
         usuarios.pop(session_id)
         return {"reply": f"{u['nome']}, você precisa tirar {ssa3} no SSA3."}
 
     return {"reply": "Erro inesperado."}
 
+# ---------- TRACK ----------
 LAST_ACCESS = time.time()
 
 @app.middleware("http")

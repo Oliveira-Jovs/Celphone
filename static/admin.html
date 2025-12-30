@@ -13,7 +13,29 @@
 
         h1 {
             color: #0a2a43;
+            margin-bottom: 10px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+        }
+
+        button {
+            background: #0a2a43;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #123a5c;
         }
 
         table {
@@ -50,13 +72,17 @@
 </head>
 <body>
 
-<h1>Painel Administrativo — Usuários</h1>
+<div class="top-bar">
+    <h1>Painel Administrativo — Usuários</h1>
+    <button onclick="baixarCSV()">⬇ Baixar CSV</button>
+</div>
 
 <div id="content" class="msg">Carregando...</div>
 
 <script>
-const API_URL = "http://127.0.0.1:5000/api/usuarios"; // 🔥 explícito
+const API_URL = "http://127.0.0.1:5000/api/usuarios";
 const content = document.getElementById("content");
+let usuarios = [];
 
 fetch(API_URL)
     .then(res => {
@@ -64,6 +90,8 @@ fetch(API_URL)
         return res.json();
     })
     .then(data => {
+        usuarios = data;
+
         if (!data.length) {
             content.innerHTML = "Nenhum usuário cadastrado.";
             return;
@@ -77,6 +105,7 @@ fetch(API_URL)
                         <th>Telefone</th>
                         <th>Nome</th>
                         <th>Colégio</th>
+                        <th>Curso</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -89,6 +118,7 @@ fetch(API_URL)
                     <td>${u.telefone}</td>
                     <td>${u.nome}</td>
                     <td>${u.colegio}</td>
+                    <td>${u.curso || "-"}</td>
                 </tr>
             `;
         });
@@ -100,6 +130,38 @@ fetch(API_URL)
     .catch(err => {
         content.innerHTML = "Erro ao carregar usuários<br>" + err.message;
     });
+
+function baixarCSV() {
+    if (!usuarios.length) {
+        alert("Nenhum dado para exportar.");
+        return;
+    }
+
+    const header = ["ID", "Telefone", "Nome", "Colégio", "Curso"];
+    const rows = usuarios.map(u => [
+        u.id,
+        u.telefone,
+        u.nome,
+        u.colegio,
+        u.curso || ""
+    ]);
+
+    let csv = header.join(";") + "\n";
+    rows.forEach(r => {
+        csv += r.join(";") + "\n";
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "usuarios.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
 </script>
 
 </body>
